@@ -1,0 +1,6 @@
+{
+  "name": "TenanTOwner Real Estate",
+  "description": "Modern real estate platform for discovering, applying, and managing rental properties.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Single admin check function
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email in ['t21shar@gmail.com', 't21shar9891851774@gmail.com', 'tenantownerofficial@gmail.com'];
+    }
+    
+    // Single owner check function using the userId field
+    function isOwner(resourceData) {
+      return request.auth != null && resourceData.userId == request.auth.uid;
+    }
+    
+    // Properties: Public read. Only Admin can create, update, or delete.
+    match /properties/{document=**} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Leads: Only Admin can read, update, or delete. Frontend writes are disabled, must go through backend.
+    match /leads/{document=**} {
+      allow create: if isAdmin();
+      allow read, update, delete: if isAdmin();
+    }
+    
+    // Applications: Read restricted to Owner or Admin. Create restricted to Owner. Update/Delete to Admin.
+    match /applications/{document=**} {
+      allow read: if isOwner(resource.data) || isAdmin();
+      allow create: if isOwner(request.resource.data) && (
+        get(/databases/$(database)/documents/properties/$(request.resource.data.propertyId)).data.get('availabilityStatus', 'available') != 'rented_out'
+      );
+      allow update, delete: if isAdmin();
+    }
+    
+    // Inquiries: Read restricted to Owner or Admin. Create restricted to Owner. Update/Delete to Admin.
+    match /inquiries/{document=**} {
+       allow read: if isOwner(resource.data) || isAdmin();
+       allow create: if isOwner(request.resource.data);
+       allow delete: if isOwner(resource.data) || isAdmin();
+       allow update: if isAdmin();
+    }
+    
+    // Enquiry Locks to prevent duplicate counting
+    match /enquiry_locks/{lockId} {
+      allow create, read, update, delete: if isAdmin(); // Only backend can write now
+    }
+    
+    match /enquiryRateLimits/{limitId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create, update, delete: if isAdmin(); // Only backend can write now
+    }
+    
+    // Users: Read and write restricted to the authenticated user themselves.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
