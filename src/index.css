@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+.dark {
+  color-scheme: dark;
+}
+
+.dark body {
+  @apply bg-slate-900 text-white;
+}
+
+.dark .bg-white {
+  @apply bg-slate-900 border-slate-800;
+}
+
+.dark .bg-slate-50 {
+  @apply bg-slate-950;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-slate-700 {
+  @apply text-slate-100;
+}
+
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  @apply text-slate-300;
+}
