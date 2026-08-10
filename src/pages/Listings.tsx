@@ -34,7 +34,9 @@ export function Listings() {
   
   const [loading, setLoading] = useState(true);
   const [errorMSG, setErrorMSG] = useState('');
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
+  );
 
   useEffect(() => {
     const loadProperties = async () => {
