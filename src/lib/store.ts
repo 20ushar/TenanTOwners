@@ -3,8 +3,15 @@ import { auth } from './firebase';
 import { supabase } from './supabase';
 import { Property, Application, Inquiry, Lead, PropertyEnquiry } from '../types';
 
-const PROPERTY_SELECT = `
-  *,
+const ADMIN_PROPERTY_SELECT = `
+  id, property_code, created_by, title, description, listing_type, status, price, location,
+  society, tower, flat_number, unit_number, property_type, bhk_type, floor, bedrooms,
+  bathrooms, sqft, google_maps_url, contact_phone, owner_name, owner_contact, tenant_name,
+  tenant_contact, furnishing_status, available_from, tenant_preference, maintenance_amount,
+  maintenance_type, is_registered, price_negotiable, super_area, carpet_area, facing,
+  construction_status, construction_quality, location_advantage, parking, balcony,
+  availability_status, status_updated_at, status_updated_by, rented_out_at, views, shares,
+  favorites, whatsapp_contacts, enquiry_count, created_at, updated_at,
   property_media(id, media_type, url, sort_order, is_primary),
   property_amenities(amenity),
   property_allowed_tenants(tenant_type)
@@ -14,6 +21,26 @@ const propertyListCache = new Map<string, { expiresAt: number; promise: Promise<
 const PROPERTY_CACHE_MS = 30_000;
 
 const clearPropertyCache = () => propertyListCache.clear();
+
+const attachPublicPropertyRelations = async (rows: any[]): Promise<any[]> => {
+  if (!rows.length) return rows;
+  const ids = rows.map((row) => row.id);
+  const [mediaResult, amenitiesResult, tenantsResult] = await Promise.all([
+    supabase.from('property_media').select('id, property_id, media_type, url, sort_order, is_primary').in('property_id', ids),
+    supabase.from('property_amenities').select('property_id, amenity').in('property_id', ids),
+    supabase.from('property_allowed_tenants').select('property_id, tenant_type').in('property_id', ids),
+  ]);
+
+  const error = mediaResult.error || amenitiesResult.error || tenantsResult.error;
+  if (error) throw error;
+
+  return rows.map((row) => ({
+    ...row,
+    property_media: (mediaResult.data || []).filter((item) => item.property_id === row.id),
+    property_amenities: (amenitiesResult.data || []).filter((item) => item.property_id === row.id),
+    property_allowed_tenants: (tenantsResult.data || []).filter((item) => item.property_id === row.id),
+  }));
+};
 
 const compact = <T extends Record<string, unknown>>(value: T): T =>
   Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as T;
@@ -89,6 +116,25 @@ const propertyFromRow = (row: any): Property => {
     createdAt: toIso(row.created_at),
     updatedAt: toIso(row.updated_at),
   };
+};
+
+const publicPropertyFromRow = (row: any): Property => {
+  const {
+    tower: _tower,
+    flatNumber: _flatNumber,
+    unitNumber: _unitNumber,
+    contactPhone: _contactPhone,
+    userId: _userId,
+    ownerName: _ownerName,
+    ownerContact: _ownerContact,
+    tenantName: _tenantName,
+    tenantContact: _tenantContact,
+    statusUpdatedAt: _statusUpdatedAt,
+    statusUpdatedBy: _statusUpdatedBy,
+    rentedOutAt: _rentedOutAt,
+    ...publicProperty
+  } = propertyFromRow(row);
+  return publicProperty as Property;
 };
 
 const propertyToRow = (property: Property) => compact({
@@ -201,9 +247,16 @@ export const generatePropertyId = async (societyName?: string): Promise<string> 
 };
 
 export const getPropertyById = async (id: string): Promise<Property | null> => {
-  const { data, error } = await supabase.from('properties').select(PROPERTY_SELECT).eq('id', id).maybeSingle();
+  const { data, error } = await supabase.rpc('get_public_properties', {
+    p_property_id: id,
+    p_property_ids: null,
+    p_listing_type: null,
+    p_status: null,
+  }).maybeSingle();
   if (error) throw error;
-  return data ? propertyFromRow(data) : null;
+  if (!data) return null;
+  const [row] = await attachPublicPropertyRelations([data]);
+  return publicPropertyFromRow(row);
 };
 
 export const getProperties = async (filters?: { listingType?: string; status?: string }): Promise<Property[]> => {
@@ -212,21 +265,28 @@ export const getProperties = async (filters?: { listingType?: string; status?: s
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
 
   const promise = (async () => {
-    let request = supabase.from('properties').select(PROPERTY_SELECT);
-    if (filters?.listingType) {
-      request = request
-        .eq('listing_type', filters.listingType)
-        .eq('property_media.is_primary', true);
-    }
-    if (filters?.status) request = request.eq('status', filters.status);
-    const { data, error } = await request.order('created_at', { ascending: false });
+    const { data, error } = await supabase.rpc('get_public_properties', {
+      p_property_id: null,
+      p_property_ids: null,
+      p_listing_type: filters?.listingType || null,
+      p_status: filters?.status || null,
+    });
     if (error) throw error;
-    return (data || []).map(propertyFromRow);
+    return (await attachPublicPropertyRelations(data || [])).map(publicPropertyFromRow);
   })();
 
   propertyListCache.set(cacheKey, { expiresAt: Date.now() + PROPERTY_CACHE_MS, promise });
   promise.catch(() => propertyListCache.delete(cacheKey));
   return promise;
+};
+
+export const getAdminProperties = async (): Promise<Property[]> => {
+  const { data, error } = await supabase
+    .from('properties')
+    .select(ADMIN_PROPERTY_SELECT)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(propertyFromRow);
 };
 
 export const addProperty = async (input: Property) => {
@@ -372,12 +432,23 @@ export const getMyPropertyEnquiries = async (): Promise<PropertyEnquiry[]> => {
   if (!auth.currentUser) return [];
   const { data, error } = await supabase
     .from('property_enquiries')
-    .select('property_id, created_at, properties(id, property_code, title, location, listing_type)')
+    .select('property_id, created_at')
     .eq('user_id', auth.currentUser.uid)
     .order('created_at', { ascending: false });
   if (error) throw error;
+  const propertyIds = [...new Set((data || []).map((row) => row.property_id))];
+  const propertyResult = propertyIds.length
+    ? await supabase.rpc('get_public_properties', {
+      p_property_id: null,
+      p_property_ids: propertyIds,
+      p_listing_type: null,
+      p_status: null,
+    })
+    : { data: [], error: null };
+  if (propertyResult.error) throw propertyResult.error;
+  const propertiesById = new Map(((propertyResult.data || []) as any[]).map((property) => [property.id, property]));
   return (data || []).map((row: any) => {
-    const property = Array.isArray(row.properties) ? row.properties[0] : row.properties;
+    const property = propertiesById.get(row.property_id);
     return {
       propertyId: row.property_id,
       createdAt: row.created_at,

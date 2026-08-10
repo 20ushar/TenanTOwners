@@ -1,6 +1,6 @@
 import { WHATSAPP_NUMBER } from '../lib/constants';
 import React, { useState, useEffect, useMemo } from 'react';
-import { getAllApplicationsAdmin, getProperties, getInquiries, addProperty, deleteProperty, updateProperty, deleteInquiry, updateInquiryStatus, updateApplicationStatus, deleteApplication, getLeads, updateLeadStatus, deleteLead, updateRentPropertyAvailability } from '../lib/store';
+import { getAllApplicationsAdmin, getAdminProperties, getInquiries, addProperty, deleteProperty, updateProperty, deleteInquiry, updateInquiryStatus, updateApplicationStatus, deleteApplication, getLeads, updateLeadStatus, deleteLead, updateRentPropertyAvailability } from '../lib/store';
 import { Application, Property, Inquiry, Lead } from '../types';
 import { Users, FileText, Home, Plus, Trash2, Eye, Edit2, CheckCircle2, XCircle, X, MessageCircle, Search, Filter, Copy, Link as LinkIcon, BarChart2, Check } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
@@ -128,7 +128,7 @@ export function AdminDashboard() {
     try {
       const [apps, props, inqs, fetchedLeads] = await Promise.all([
         getAllApplicationsAdmin(),
-        getProperties(),
+        getAdminProperties(),
         getInquiries(),
         getLeads()
       ]);
