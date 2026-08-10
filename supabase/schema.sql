@@ -142,7 +142,7 @@ create table if not exists public.leads (
 create table if not exists public.property_enquiries (
   property_id text not null references public.properties(id) on update cascade on delete cascade,
   user_id text not null references public.user_profiles(firebase_uid) on update cascade on delete cascade,
-  lead_id text references public.leads(id) on update cascade on delete set null,
+  lead_id text references public.leads(id) on update cascade on delete cascade,
   created_at timestamptz not null default now(),
   primary key (property_id, user_id)
 );
