@@ -1,7 +1,7 @@
 import { validateProperty, validateApplication, validateInquiry, validateLead } from './validation';
 import { auth } from './firebase';
 import { supabase } from './supabase';
-import { Property, Application, Inquiry, Lead } from '../types';
+import { Property, Application, Inquiry, Lead, PropertyEnquiry } from '../types';
 
 const PROPERTY_SELECT = `
   *,
@@ -366,6 +366,30 @@ export const updateInquiryStatus = async (id: string, status: 'confirmed' | 'rej
 export const deleteInquiry = async (id: string) => {
   const { error } = await supabase.from('inquiries').delete().eq('id', id);
   if (error) throw error;
+};
+
+export const getMyPropertyEnquiries = async (): Promise<PropertyEnquiry[]> => {
+  if (!auth.currentUser) return [];
+  const { data, error } = await supabase
+    .from('property_enquiries')
+    .select('property_id, created_at, properties(id, property_code, title, location, listing_type)')
+    .eq('user_id', auth.currentUser.uid)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((row: any) => {
+    const property = Array.isArray(row.properties) ? row.properties[0] : row.properties;
+    return {
+      propertyId: row.property_id,
+      createdAt: row.created_at,
+      property: property ? {
+        id: property.id,
+        propertyId: property.property_code || undefined,
+        title: property.title,
+        location: property.location,
+        listingType: property.listing_type || undefined,
+      } : undefined,
+    };
+  });
 };
 
 export const getWishlist = async (): Promise<string[]> => {

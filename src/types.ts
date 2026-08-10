@@ -107,3 +107,15 @@ export interface Inquiry {
   shiftingDate?: string;
   propertyId?: string;
 }
+
+export interface PropertyEnquiry {
+  propertyId: string;
+  createdAt: string;
+  property?: {
+    id: string;
+    propertyId?: string;
+    title: string;
+    location: string;
+    listingType?: string;
+  };
+}

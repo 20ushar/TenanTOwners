@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { getMyInquiries, getApplications, deleteInquiry } from '../lib/store';
-import { Inquiry, Application } from '../types';
+import { getMyInquiries, getApplications, getMyPropertyEnquiries, deleteInquiry } from '../lib/store';
+import { Inquiry, Application, PropertyEnquiry } from '../types';
 import { useAuth } from '../lib/AuthContext';
-import { FileText, Calendar, Home, Trash2 } from 'lucide-react';
+import { FileText, Home, MessageSquare, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function MyRequests() {
   const { user } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [propertyEnquiries, setPropertyEnquiries] = useState<PropertyEnquiry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,12 +20,14 @@ export function MyRequests() {
 
   const loadData = async () => {
     try {
-      const [inqs, apps] = await Promise.all([
+      const [inqs, apps, enquiries] = await Promise.all([
         getMyInquiries(),
-        getApplications()
+        getApplications(),
+        getMyPropertyEnquiries(),
       ]);
       setInquiries(inqs.sort((a, b) => new Date(b.dateSubmitted).getTime() - new Date(a.dateSubmitted).getTime()));
       setApplications(apps.sort((a, b) => new Date(b.dateApplied).getTime() - new Date(a.dateApplied).getTime()));
+      setPropertyEnquiries(enquiries);
     } catch (error) {
       console.error("Failed to load requests:", error);
     } finally {
@@ -76,10 +79,40 @@ export function MyRequests() {
     <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8 space-y-12">
       <div>
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">My Requests</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-2">Track the status of your property applications and requirement requests.</p>
+        <p className="text-slate-500 dark:text-slate-400 mt-2">Track your property enquiries, applications, and requirement requests.</p>
       </div>
 
       <div className="space-y-8">
+        <div>
+          <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
+            <MessageSquare className="w-6 h-6 text-[#4aa4f0]" />
+            <h2 className="text-2xl font-bold">My Enquiries</h2>
+          </div>
+
+          {propertyEnquiries.length === 0 ? (
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 text-center border border-slate-200 dark:border-slate-700 shadow-sm">
+              <p className="text-slate-500 dark:text-slate-400 mb-4">You haven't enquired about any properties yet.</p>
+              <Link to="/listings" className="inline-flex items-center justify-center rounded-xl bg-[#4aa4f0] px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-opacity-90 transition-all">Browse Listings</Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {propertyEnquiries.map((enquiry) => (
+                <div key={`${enquiry.propertyId}-${enquiry.createdAt}`} className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                  <div className="flex justify-between items-start gap-4 mb-4">
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1">{enquiry.property?.title || `Property ${enquiry.propertyId}`}</h3>
+                      {enquiry.property?.location && <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">{enquiry.property.location}</p>}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-2">Submitted on {new Date(enquiry.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    <span className="shrink-0 px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-[#4aa4f0]/20 text-[#4aa4f0]">Submitted</span>
+                  </div>
+                  <Link to={`/property/${enquiry.propertyId}`} className="text-sm text-[#4aa4f0] font-bold hover:underline">View Property Details</Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div>
           <div className="flex items-center gap-2 mb-6 text-slate-900 dark:text-white">
             <FileText className="w-6 h-6 text-[#8cc63f]" />
