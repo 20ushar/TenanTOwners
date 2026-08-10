@@ -17,7 +17,9 @@ dotenv.config({ path: '.env.local' });
 
 // Initialize Firebase Admin
 try {
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64
+    ? Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64, 'base64').toString('utf8')
+    : process.env.FIREBASE_SERVICE_ACCOUNT_KEY
     || (process.env.FIREBASE_SERVICE_ACCOUNT_PATH
       ? fs.readFileSync(process.env.FIREBASE_SERVICE_ACCOUNT_PATH, 'utf8')
       : undefined);
@@ -30,10 +32,11 @@ try {
       console.log('Firebase Admin initialized with service account.');
     }
   } else {
-    console.warn('FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_SERVICE_ACCOUNT_PATH is not set. Admin features like backend enquiries will fail.');
+    console.warn('Firebase service account is not set. Admin features like backend enquiries will fail.');
   }
 } catch (e) {
-  console.error('Failed to initialize Firebase Admin:', e);
+  const message = e instanceof Error ? e.message : 'Unknown initialization error';
+  console.error('Failed to initialize Firebase Admin:', message);
 }
 
 const supabaseAdmin = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
