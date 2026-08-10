@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /704STK
+Disallow: /my-requests
+Disallow: /wishlist
+
+Sitemap: https://tenantowners.in/sitemap.xml

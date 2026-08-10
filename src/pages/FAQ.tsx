@@ -129,11 +129,11 @@ export function FAQ() {
       <Helmet>
         <title>Frequently Asked Questions | TenanTOwners</title>
         <meta name="description" content="Find answers about property listings, rental brokerage, buying properties, property visits, accounts and privacy on TenanTOwners." />
-        <link rel="canonical" href="https://tenantowners.com/faq" />
+        <link rel="canonical" href="https://tenantowners.in/faq" />
         <meta property="og:title" content="Frequently Asked Questions | TenanTOwners" />
         <meta property="og:description" content="Find answers about property listings, rental brokerage, buying properties, property visits, accounts and privacy on TenanTOwners." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://tenantowners.com/faq" />
+        <meta property="og:url" content="https://tenantowners.in/faq" />
       </Helmet>
 
       <div className="max-w-4xl mx-auto px-4 py-12 md:py-16">

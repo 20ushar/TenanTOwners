@@ -8,11 +8,11 @@ export function AboutUs() {
       <Helmet>
         <title>About TenanTOwners | Rental and Resale Properties</title>
         <meta name="description" content="Learn about TenanTOwners, our mission, vision and approach to simplifying rental and resale property discovery." />
-        <link rel="canonical" href="https://tenantowners.com/about" />
+        <link rel="canonical" href="https://tenantowners.in/about" />
         <meta property="og:title" content="About TenanTOwners | Rental and Resale Properties" />
         <meta property="og:description" content="Learn about TenanTOwners, our mission, vision and approach to simplifying rental and resale property discovery." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://tenantowners.com/about" />
+        <meta property="og:url" content="https://tenantowners.in/about" />
       </Helmet>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight mb-8">About Us</h1>
