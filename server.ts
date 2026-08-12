@@ -8,6 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { v2 as cloudinary } from "cloudinary";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import { createWhatsAppWebhookRouter } from "./src/server/whatsapp/webhook";
 
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -112,7 +113,37 @@ cloudinary.config({
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-app.use(express.json());
+// Meta signs the exact request bytes. Mount this raw parser before the general
+// JSON parser so the webhook can authenticate bytes before parsing JSON.
+app.use(
+  "/api/whatsapp/webhook",
+  express.raw({ type: "application/json", limit: "256kb" }),
+  createWhatsAppWebhookRouter({
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
+    appSecret: process.env.WHATSAPP_APP_SECRET,
+    recordMessage: async (message) => {
+      if (!supabaseAdmin) {
+        throw new Error("Webhook deduplication storage is not configured");
+      }
+
+      const { error } = await supabaseAdmin
+        .from("whatsapp_webhook_messages")
+        .insert({
+          provider_message_id: message.messageId,
+          sender_id: message.senderId,
+          provider_timestamp: message.timestamp,
+          message_type: message.messageType,
+          has_text: message.text !== null,
+        });
+
+      if (error?.code === "23505") return false;
+      if (error) throw error;
+      return true;
+    },
+  }),
+);
+
+app.use(express.json({ limit: "256kb" }));
 
 // Use the operating system's writable temporary directory. Serverless platforms
 // such as Vercel expose a read-only application directory but provide a writable

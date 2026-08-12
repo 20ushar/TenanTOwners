@@ -11,6 +11,7 @@
     "clean": "rm -rf dist server.js server.cjs dist/server.cjs",
     "lint": "tsc --noEmit",
     "test:security": "node ./scripts/check-public-property-boundary.mjs",
+    "test:whatsapp": "node --import tsx --test ./tests/whatsapp-webhook.test.ts",
     "migrate:supabase": "tsx ./scripts/migrate-firestore-to-supabase.ts"
   },
   "dependencies": {
