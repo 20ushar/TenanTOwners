@@ -37,6 +37,14 @@ export function PropertyDetail() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
+  // Firebase restores the signed-in user asynchronously. Keep the form defaults
+  // in sync once that user is available instead of relying on the first render.
+  useEffect(() => {
+    if (!user) return;
+    setName(user.displayName || '');
+    setEnquiryEmail(user.email || '');
+  }, [user?.uid, user?.displayName, user?.email]);
+
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
