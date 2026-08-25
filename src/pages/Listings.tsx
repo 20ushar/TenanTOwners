@@ -9,6 +9,8 @@ import { useAuth } from '../lib/AuthContext';
 import { usePreference } from '../lib/PreferenceContext';
 import { ImageSlider } from '../components/ImageSlider';
 
+const PROPERTIES_PER_PAGE = 12;
+
 export function Listings() {
   const { user } = useAuth();
   const { preference, setPreference } = usePreference();
@@ -34,6 +36,7 @@ export function Listings() {
   
   const [loading, setLoading] = useState(true);
   const [errorMSG, setErrorMSG] = useState('');
+  const [visibleCount, setVisibleCount] = useState(PROPERTIES_PER_PAGE);
   const [isFiltersOpen, setIsFiltersOpen] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches,
   );
@@ -113,6 +116,13 @@ export function Listings() {
 
     return result;
   }, [properties, preference, filterLocation, filterBHK, filterTenant, filterBudget, filterFurnishing, filterMaintenance, filterMinPrice, filterMaxPrice, filterPropertyType, filterConstructionQuality, filterRegistered, filterFacing, filterSocietyBuy, searchQueryBuy, sortOrder, rentSortOrder]);
+
+  useEffect(() => {
+    setVisibleCount(PROPERTIES_PER_PAGE);
+  }, [preference, filterLocation, filterBHK, filterTenant, filterBudget, filterFurnishing, filterMaintenance, filterMinPrice, filterMaxPrice, filterPropertyType, filterConstructionQuality, filterRegistered, filterFacing, filterSocietyBuy, searchQueryBuy, sortOrder, rentSortOrder]);
+
+  const visibleProperties = filteredProperties.slice(0, visibleCount);
+  const hasMoreProperties = visibleCount < filteredProperties.length;
 
   const handleWhatsAppClick = async (property: Property) => {
     try {
@@ -479,7 +489,7 @@ export function Listings() {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProperties.map((property) => {
+              {visibleProperties.map((property) => {
                 const allMedia: { type: 'image' | 'video', url: string }[] = [];
                 if (property.imageUrls && property.imageUrls.length > 0) {
                   allMedia.push(...property.imageUrls.map(url => ({ type: 'image' as const, url })));
@@ -568,6 +578,21 @@ export function Listings() {
               );
               })}
             </div>
+
+            {hasMoreProperties && (
+              <div className="mt-8 flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVisibleCount((count) => count + PROPERTIES_PER_PAGE)}
+                  className="rounded-xl bg-[#4aa4f0] px-8 py-3 font-bold text-white shadow-sm transition-colors hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900"
+                >
+                  Load More Properties
+                </button>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Showing {visibleProperties.length} of {filteredProperties.length} properties
+                </p>
+              </div>
+            )}
             
             {filteredProperties.length === 0 && (
               <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm mt-4">
