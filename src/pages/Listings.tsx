@@ -8,6 +8,7 @@ import { cn, formatPrice } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
 import { usePreference } from '../lib/PreferenceContext';
 import { ImageSlider } from '../components/ImageSlider';
+import { trackMetaCustomEvent } from '../lib/metaPixel';
 
 export function Listings() {
   const { user } = useAuth();
@@ -115,6 +116,14 @@ export function Listings() {
   }, [properties, preference, filterLocation, filterBHK, filterTenant, filterBudget, filterFurnishing, filterMaintenance, filterMinPrice, filterMaxPrice, filterPropertyType, filterConstructionQuality, filterRegistered, filterFacing, filterSocietyBuy, searchQueryBuy, sortOrder, rentSortOrder]);
 
   const handleWhatsAppClick = async (property: Property) => {
+    trackMetaCustomEvent('WhatsAppClick', {
+      content_ids: [property.id],
+      content_name: property.title,
+      content_category: 'Listings contact',
+      value: property.price,
+      currency: 'INR',
+    });
+
     try {
       await fetch('/api/track-whatsapp', {
         method: 'POST',
