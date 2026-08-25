@@ -47,3 +47,18 @@ export function getYouTubeEmbedUrl(value: string): string | null {
     ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`
     : null;
 }
+
+export function isSupportedPropertyVideoUrl(value?: string): boolean {
+  if (!value) return true;
+  if (isYouTubeUrl(value)) return true;
+
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' && (
+      url.hostname.toLowerCase() === 'res.cloudinary.com' ||
+      /\.(mp4|webm)(?:$|\?)/i.test(url.pathname + url.search)
+    );
+  } catch {
+    return false;
+  }
+}
