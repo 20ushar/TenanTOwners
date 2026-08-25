@@ -1,5 +1,5 @@
 import { WHATSAPP_NUMBER, WHATSAPP_DISPLAY_NUMBER } from '../lib/constants';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getPropertyById, addApplication, isInWishlist, toggleWishlist, recordPropertyView, addLead, incrementPropertyMetric, recordUniqueEnquiry, getProperties } from '../lib/store';
 import { Property } from '../types';
@@ -7,6 +7,7 @@ import { MapPin, Bed, Bath, Square, Phone, MessageCircle, ArrowLeft, CheckCircle
 import { useAuth } from '../lib/AuthContext';
 import { submitPropertyEnquiry, getEnquiryLimit } from '../lib/api';
 import { optimizeCloudinaryUrl, formatPrice } from '../lib/utils';
+import { trackMetaCustomEvent, trackMetaEvent } from '../lib/metaPixel';
 
 export function PropertyDetail() {
   const { id } = useParams();
@@ -36,6 +37,7 @@ export function PropertyDetail() {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const trackedPropertyId = useRef<string | null>(null);
 
   // Firebase restores the signed-in user asynchronously. Keep the form defaults
   // in sync once that user is available instead of relying on the first render.
@@ -134,6 +136,19 @@ export function PropertyDetail() {
   const activeMedia = allMedia[activeImageIndex] || allMedia[0];
 
   useEffect(() => {
+    if (!property || trackedPropertyId.current === property.id) return;
+    trackedPropertyId.current = property.id;
+    trackMetaEvent('ViewContent', {
+      content_ids: [property.id],
+      content_name: property.title,
+      content_type: 'product',
+      content_category: property.listingType === 'buy' ? 'Property for sale' : 'Rental property',
+      value: property.price,
+      currency: 'INR',
+    });
+  }, [property]);
+
+  useEffect(() => {
     if (allMedia.length <= 1) return;
     if (activeMedia?.type === 'video') return; // Don't auto-slide away from a playing video automatically, unless we want to based on video length. Usually better to let user pause/slide manually from video.
 
@@ -219,6 +234,13 @@ useEffect(() => {
       if (response.success) {
         if (!response.message.includes('Already enquired')) {
             setProperty(prev => prev ? { ...prev, enquiryCount: (prev.enquiryCount || 0) + 1 } : prev);
+            trackMetaEvent('Lead', {
+              content_ids: [property.id],
+              content_name: property.title,
+              content_category: 'Property enquiry',
+              value: property.price,
+              currency: 'INR',
+            });
         }
       }
       
@@ -258,6 +280,13 @@ useEffect(() => {
         status: 'pending',
         dateApplied: new Date().toISOString()
       });
+      trackMetaEvent('Lead', {
+        content_ids: [property.id],
+        content_name: property.title,
+        content_category: 'Rental application',
+        value: property.price,
+        currency: 'INR',
+      });
       
       setApplied(true);
       setTimeout(() => {
@@ -292,6 +321,14 @@ useEffect(() => {
 
   const handleWhatsAppClick = async () => {
     if (!property) return;
+
+    trackMetaCustomEvent('WhatsAppClick', {
+      content_ids: [property.id],
+      content_name: property.title,
+      content_category: 'Property contact',
+      value: property.price,
+      currency: 'INR',
+    });
     
     // Store Lead in DB
     try {
