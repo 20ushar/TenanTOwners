@@ -9,6 +9,7 @@ import { useAuth } from '../lib/AuthContext';
 import { usePreference } from '../lib/PreferenceContext';
 import { ImageSlider } from '../components/ImageSlider';
 import { trackMetaCustomEvent } from '../lib/metaPixel';
+import { isYouTubeUrl } from '../lib/youtube';
 
 const PROPERTIES_PER_PAGE = 12;
 
@@ -505,7 +506,7 @@ export function Listings() {
                 } else if (property.imageUrl) {
                   allMedia.push({ type: 'image', url: property.imageUrl });
                 }
-                if (property.videoUrl) {
+                if (property.videoUrl && !isYouTubeUrl(property.videoUrl)) {
                   allMedia.push({ type: 'video', url: property.videoUrl });
                 }
 
@@ -522,6 +523,11 @@ export function Listings() {
                        <div className="absolute top-4 right-4 bg-white dark:bg-slate-800/90 backdrop-blur rounded-lg px-2 py-1 text-xs font-bold text-[#4aa4f0] z-10 pointer-events-none">
                           {property.listingType === 'buy' ? formatPrice(property.price) : `₹${property.price}/mo`}
                        </div>
+                       {isYouTubeUrl(property.videoUrl) && (
+                         <div className="absolute left-4 top-4 z-10 rounded-lg bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow pointer-events-none">
+                           ▶ Video Tour
+                         </div>
+                       )}
                        <h3 className="absolute bottom-4 left-4 right-4 z-10 text-white font-bold text-lg leading-tight pointer-events-none">{property.title}</h3>
                     </Link>
                     <div className="p-5 flex flex-col flex-1 bg-white dark:bg-slate-800">

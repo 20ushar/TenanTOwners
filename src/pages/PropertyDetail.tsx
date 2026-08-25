@@ -8,6 +8,8 @@ import { useAuth } from '../lib/AuthContext';
 import { submitPropertyEnquiry, getEnquiryLimit } from '../lib/api';
 import { optimizeCloudinaryUrl, formatPrice } from '../lib/utils';
 import { trackMetaCustomEvent, trackMetaEvent } from '../lib/metaPixel';
+import { YouTubePlayer } from '../components/YouTubePlayer';
+import { getYouTubeThumbnailUrl, isYouTubeUrl } from '../lib/youtube';
 
 export function PropertyDetail() {
   const { id } = useParams();
@@ -123,14 +125,14 @@ export function PropertyDetail() {
     fetchData();
   }, [id, user]);
 
-  const allMedia: { type: 'image' | 'video', url: string }[] = [];
+  const allMedia: { type: 'image' | 'video' | 'youtube', url: string }[] = [];
   if (property?.imageUrls && property.imageUrls.length > 0) {
     allMedia.push(...property.imageUrls.map(url => ({ type: 'image' as const, url })));
   } else if (property?.imageUrl) {
     allMedia.push({ type: 'image', url: property.imageUrl });
   }
   if (property?.videoUrl) {
-    allMedia.push({ type: 'video', url: property.videoUrl });
+    allMedia.push({ type: isYouTubeUrl(property.videoUrl) ? 'youtube' : 'video', url: property.videoUrl });
   }
 
   const activeMedia = allMedia[activeImageIndex] || allMedia[0];
@@ -150,7 +152,7 @@ export function PropertyDetail() {
 
   useEffect(() => {
     if (allMedia.length <= 1) return;
-    if (activeMedia?.type === 'video') return; // Don't auto-slide away from a playing video automatically, unless we want to based on video length. Usually better to let user pause/slide manually from video.
+    if (activeMedia?.type === 'video' || activeMedia?.type === 'youtube') return; // Don't auto-slide away from a playing video automatically, unless we want to based on video length. Usually better to let user pause/slide manually from video.
 
     const interval = setInterval(() => {
       setActiveImageIndex((prev) => (prev + 1) % allMedia.length);
@@ -422,6 +424,21 @@ Please share more details.`;
       >
         <div className="relative h-[400px] md:h-[500px]">
           {allMedia.map((media, index) => {
+            if (media.type === 'youtube') {
+              return (
+                <div
+                  key={index}
+                  className={`absolute inset-0 h-full w-full bg-black transition-opacity duration-500 ${activeImageIndex === index ? 'z-10 opacity-100' : 'pointer-events-none z-0 opacity-0'}`}
+                >
+                  <YouTubePlayer
+                    url={media.url}
+                    title={`${property.title} video tour`}
+                    active={activeImageIndex === index}
+                  />
+                </div>
+              );
+            }
+
             if (media.type === 'video') {
               return (
                 <div 
@@ -500,7 +517,19 @@ Please share more details.`;
                    activeImageIndex === index ? 'border-[#4aa4f0] opacity-100' : 'border-transparent opacity-60 hover:opacity-100'
                  }`}
                >
-                 {media.type === 'video' ? (
+                 {media.type === 'youtube' ? (
+                   <div className="relative h-full w-full bg-slate-800">
+                     <img
+                       src={getYouTubeThumbnailUrl(media.url) || undefined}
+                       alt="YouTube video tour"
+                       loading="lazy"
+                       className="h-full w-full object-cover"
+                     />
+                     <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-xs font-bold text-white">
+                       YouTube Tour
+                     </span>
+                   </div>
+                 ) : media.type === 'video' ? (
                    <div className="w-full h-full bg-slate-800 flex items-center justify-center">
                      <span className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">Video</span>
                    </div>
