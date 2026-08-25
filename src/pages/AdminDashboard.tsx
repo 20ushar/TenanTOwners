@@ -7,6 +7,7 @@ import { useAuth } from '../lib/AuthContext';
 import { isAdminEmail } from '../lib/admin';
 import { Link, Navigate } from 'react-router-dom';
 import { formatPrice } from '../lib/utils';
+import { isSupportedPropertyVideoUrl } from '../lib/youtube';
 
 export function AdminDashboard() {
   const { user } = useAuth();
@@ -249,6 +250,11 @@ export function AdminDashboard() {
       }
     } catch {
       alert("Please provide a valid Google Maps link.");
+      return;
+    }
+
+    if (newProperty.videoUrl && !isSupportedPropertyVideoUrl(newProperty.videoUrl)) {
+      alert("Please provide a valid YouTube, YouTube Shorts, Cloudinary, MP4, or WebM video URL.");
       return;
     }
 
@@ -541,6 +547,21 @@ export function AdminDashboard() {
                            value={newProperty.imageUrl || ''} 
                            onChange={e => setNewProperty({...newProperty, imageUrl: e.target.value, imageUrls: newProperty.imageUrls ? [...newProperty.imageUrls, e.target.value] : [e.target.value]})} 
                          />
+                         <div>
+                           <label className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                             YouTube Video Tour (Optional)
+                           </label>
+                           <input
+                             type="url"
+                             placeholder="https://youtu.be/... or YouTube Shorts URL"
+                             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:bg-white focus:ring-2 focus:ring-[#4aa4f0] dark:border-slate-700 dark:bg-slate-900 dark:focus:bg-slate-800"
+                             value={newProperty.videoUrl || ''}
+                             onChange={e => setNewProperty({...newProperty, videoUrl: e.target.value})}
+                           />
+                           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                             Available for both Rent and Sale properties. Public or unlisted videos must allow embedding.
+                           </p>
+                         </div>
                        </div>
                     </div>
                   </div>
