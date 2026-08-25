@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { addInquiry } from '../lib/store';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { trackMetaEvent } from '../lib/metaPixel';
 
 export function CustomInquiry() {
   const [formData, setFormData] = useState({
@@ -31,6 +32,9 @@ export function CustomInquiry() {
         ...formData,
         status: 'pending',
         dateSubmitted: new Date().toISOString()
+      });
+      trackMetaEvent('Lead', {
+        content_category: 'Custom property requirement',
       });
       setSubmitted(true);
     } catch (error: any) {
