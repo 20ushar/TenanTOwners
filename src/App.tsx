@@ -7,6 +7,7 @@ import { RequireAuth } from './lib/RequireAuth';
 import { RequireAdmin } from './lib/RequireAdmin';
 import { PreferenceProvider } from './lib/PreferenceContext';
 import { SplashScreen } from './components/SplashScreen';
+import { MetaPixelTracker } from './components/MetaPixelTracker';
 
 const Home = React.lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
 const Listings = React.lazy(() => import('./pages/Listings').then(m => ({ default: m.Listings })));
@@ -37,6 +38,7 @@ function AppContent() {
     <>
       <SplashScreen finishLoading={!loading} />
       <BrowserRouter>
+        <MetaPixelTracker />
         <PreferenceProvider>
           <Suspense fallback={<PageLoader />}>
             <Routes>
