@@ -9,6 +9,12 @@ import { v2 as cloudinary } from "cloudinary";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import { createWhatsAppWebhookRouter } from "./src/server/whatsapp/webhook";
+import {
+  buildMissingPropertyMetadata,
+  buildPropertyMetadata,
+  injectSocialMetadata,
+  isPublicHttpsImageUrl,
+} from "./src/server/propertyMetadata";
 
 import { cert, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
@@ -112,6 +118,22 @@ cloudinary.config({
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+let cachedIndexHtml: string | null = null;
+
+function readIndexHtml() {
+  if (cachedIndexHtml && process.env.NODE_ENV === 'production') return cachedIndexHtml;
+
+  const candidates = [
+    path.join(process.cwd(), 'dist', 'index.html'),
+    path.join(process.cwd(), 'index.html'),
+  ];
+  const templatePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!templatePath) throw new Error('Unable to locate the application HTML template.');
+
+  const html = fs.readFileSync(templatePath, 'utf8');
+  if (process.env.NODE_ENV === 'production') cachedIndexHtml = html;
+  return html;
+}
 
 // Meta signs the exact request bytes. Mount this raw parser before the general
 // JSON parser so the webhook can authenticate bytes before parsing JSON.
@@ -144,6 +166,66 @@ app.use(
 );
 
 app.use(express.json({ limit: "256kb" }));
+
+app.get('/property/:propertyId', async (req, res) => {
+  const propertyId = req.params.propertyId;
+  const isValidPropertyId = /^[A-Za-z0-9_-]{1,100}$/.test(propertyId);
+
+  try {
+    const html = readIndexHtml();
+    if (!isValidPropertyId || !supabaseAdmin) {
+      const status = !isValidPropertyId ? 404 : 503;
+      return res
+        .status(status)
+        .set('Cache-Control', 'public, max-age=0, s-maxage=60')
+        .type('html')
+        .send(injectSocialMetadata(html, buildMissingPropertyMetadata(propertyId)));
+    }
+
+    const { data: property, error: propertyError } = await supabaseAdmin
+      .from('properties')
+      .select('id, title, description, listing_type, price, location, society')
+      .eq('id', propertyId)
+      .maybeSingle();
+    if (propertyError) throw propertyError;
+
+    if (!property) {
+      return res
+        .status(404)
+        .set('Cache-Control', 'public, max-age=0, s-maxage=60')
+        .type('html')
+        .send(injectSocialMetadata(html, buildMissingPropertyMetadata(propertyId)));
+    }
+
+    const { data: media, error: mediaError } = await supabaseAdmin
+      .from('property_media')
+      .select('url, sort_order, is_primary')
+      .eq('property_id', propertyId)
+      .eq('media_type', 'image')
+      .order('is_primary', { ascending: false })
+      .order('sort_order', { ascending: true });
+    if (mediaError) throw mediaError;
+
+    const imageUrl = (media || []).map((item) => item.url).find(isPublicHttpsImageUrl) || null;
+    const metadata = buildPropertyMetadata({ ...property, imageUrl });
+    return res
+      .status(200)
+      .set('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=600')
+      .type('html')
+      .send(injectSocialMetadata(html, metadata));
+  } catch (error) {
+    console.error('Property metadata rendering failed:', error instanceof Error ? error.message : 'Unknown error');
+    try {
+      return res
+        .status(503)
+        .set('Cache-Control', 'no-store')
+        .type('html')
+        .send(injectSocialMetadata(readIndexHtml(), buildMissingPropertyMetadata(propertyId)));
+    } catch {
+      return res.status(503).send('Service temporarily unavailable.');
+    }
+  }
+});
 
 // Use the operating system's writable temporary directory. Serverless platforms
 // such as Vercel expose a read-only application directory but provide a writable

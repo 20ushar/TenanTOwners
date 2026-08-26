@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "dist/index.html"
+    }
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -20,6 +25,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/property/:propertyId",
+      "destination": "/api/index.ts"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
